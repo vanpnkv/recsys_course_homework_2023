@@ -21,7 +21,7 @@ def generate_new_banner(n, a=ALPHA, b=BETA, mu=MU, random_state=None):
     return p, lifetimes
 
 
-def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
+def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None,verbose=False):
     state = pd.DataFrame(np.zeros((initial_banners, 4)), columns=['impressions', 'clicks', 'lifetime', 'p'])
     state['p'], state['lifetime'] = generate_new_banner(initial_banners)
     regret = 0
@@ -50,8 +50,8 @@ def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
         state = state[state['lifetime'] > 0]
         if random_state:
             random_state = 7*random_state % MAX_RANDOM
-
-        if not i % MONITORING_FREQ:
-            print('{} impressions have been simulated'.format(i + 1))
+        if verbose:
+            if not i % MONITORING_FREQ:
+                print('{} impressions have been simulated'.format(i + 1))
 
     return {'regret': regret, 'rounds': n, 'total_banners': max_index, 'history': state}
