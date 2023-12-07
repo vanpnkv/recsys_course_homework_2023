@@ -17,17 +17,19 @@ def generate_new_banner(n, a=ALPHA, b=BETA, mu=MU, random_state=None):
         random_state += 1
     p = beta.rvs(a, b, size=n, random_state=random_state)
     lifetimes = expon.rvs(scale=mu, size=n, random_state=random_state)
-    
+
     return p, lifetimes
 
 
-def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
+def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None, verbose=True):
     state = pd.DataFrame(np.zeros((initial_banners, 4)), columns=['impressions', 'clicks', 'lifetime', 'p'])
     state['p'], state['lifetime'] = generate_new_banner(initial_banners)
     regret = 0
     max_index = initial_banners
     borning_rate = initial_banners*(1-np.exp(-1/MU))
     random_state = seed
+
+    regrets_per_round = []
 
     for i in range(n):
         if uniform.rvs(random_state=random_state) < borning_rate or state.shape[0] < 2:
@@ -36,7 +38,7 @@ def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
             state = pd.concat([state, new_banner], verify_integrity=True)
             max_index += 1
 
-        index = policy(state[['impressions', 'clicks']].copy())
+        index = policy(state[['impressions', 'clicks', 'lifetime']].copy())
 
         assert index in state.index, 'Error, wrong action number'
 
@@ -51,7 +53,12 @@ def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
         if random_state:
             random_state = 7*random_state % MAX_RANDOM
 
-        if not i % MONITORING_FREQ:
-            print('{} impressions have been simulated'.format(i + 1))
+        regrets_per_round.append(regret / (i + 1))
+        if verbose and not i % MONITORING_FREQ:
+            print(f'Impressions simulated: {str(i+1).ljust(6)} |   Regret per round: {round(regrets_per_round[-1], 4)}')
 
-    return {'regret': regret, 'rounds': n, 'total_banners': max_index, 'history': state}
+    return {'regret': regret,
+            'rounds': n,
+            'total_banners': max_index,
+            'history': state,
+            'regrets_per_round': regrets_per_round}
