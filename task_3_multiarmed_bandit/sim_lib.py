@@ -4,6 +4,7 @@ import pandas as pd
 
 from scipy.stats import beta, uniform, bernoulli, expon
 from typing import Callable
+from tqdm import tqdm
 
 ALPHA = 1
 BETA = 20
@@ -21,7 +22,7 @@ def generate_new_banner(n, a=ALPHA, b=BETA, mu=MU, random_state=None):
     return p, lifetimes
 
 
-def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
+def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None, process_printing=True):
     state = pd.DataFrame(np.zeros((initial_banners, 4)), columns=['impressions', 'clicks', 'lifetime', 'p'])
     state['p'], state['lifetime'] = generate_new_banner(initial_banners)
     regret = 0
@@ -29,7 +30,7 @@ def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
     borning_rate = initial_banners*(1-np.exp(-1/MU))
     random_state = seed
 
-    for i in range(n):
+    for i in tqdm(range(n), total=n):
         if uniform.rvs(random_state=random_state) < borning_rate or state.shape[0] < 2:
             p, lifetime = generate_new_banner(1, random_state=random_state)
             new_banner = pd.DataFrame({'impressions': 0, 'clicks': 0, 'lifetime': lifetime, 'p': p}, index=[max_index])
@@ -51,7 +52,7 @@ def simulation(policy: Callable, n=10 ** 6, initial_banners=9, seed=None):
         if random_state:
             random_state = 7*random_state % MAX_RANDOM
 
-        if not i % MONITORING_FREQ:
+        if not i % MONITORING_FREQ and process_printing:
             print('{} impressions have been simulated'.format(i + 1))
 
     return {'regret': regret, 'rounds': n, 'total_banners': max_index, 'history': state}
